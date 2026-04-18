@@ -8,15 +8,22 @@ connectRedisClient();
 
 app.use(express.json());
 
-app.get("/", async (req,res)=>{
-    try {const cachedValue = await client.get("todos");
-    if(cachedValue) return res.json(cachedValue)
-    const {data} = await axios.get("https://jsonplaceholder.typicode.com/todos");
-    console.log(typeof data);
-    
-    await client.set("todos",JSON.stringify(data));
-    await client.EXPIRE("todos", 30)
-    res.json(data);
+app.get("/:userId", async (req,res)=>{
+    try {
+        const {userId} = req.params;
+        const user = await client.GET(`userId:${userId}`);
+        if(user) return res.json(user);
+        const userOnline = await axios.get(`https://jsonplaceholder.typicode.com/todos/${userId}`);
+        console.log("useronline",userOnline);
+    for (const ele of userOnline)
+    {
+        
+            const {userId, id, title, completed} = ele;
+            await client.HSET(`userId:${userId}`,{id : `${id}`, title:`${title}`, completed:`${completed}`});
+            await client.EXPIRE(`userId:${userId}`, 40000);
+    }
+
+    return res.json(userOnline);
         
     } catch (error) {
         console.log(error);
@@ -26,6 +33,19 @@ app.get("/", async (req,res)=>{
     }
     
 
+})
+
+app.post("/:userId",async(req,res)=>{
+    try {
+        const {userId} = req.params;
+
+    
+
+
+
+    } catch (error) {
+        console.log(error);
+    }
 })
 
 
