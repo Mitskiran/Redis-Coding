@@ -8,22 +8,28 @@ connectRedisClient();
 
 app.use(express.json());
 
-app.get("/:userId", async (req,res)=>{
+app.get("/:Id", async (req,res)=>{
     try {
-        const {userId} = req.params;
-        const user = await client.GET(`userId:${userId}`);
-        if(user) return res.json(user);
-        const userOnline = await axios.get(`https://jsonplaceholder.typicode.com/todos/${userId}`);
-        console.log("useronline",userOnline);
-    for (const ele of userOnline)
-    {
+        const {Id} = req.params;
+        const user = await client.HGETALL(`userId:${Id}`);
+        console.log(user);
+        console.log(Object.keys(user).length === 0);
+        if(!(Object.keys(user).length === 0))
+        {
         
-            const {userId, id, title, completed} = ele;
-            await client.HSET(`userId:${userId}`,{id : `${id}`, title:`${title}`, completed:`${completed}`});
-            await client.EXPIRE(`userId:${userId}`, 40000);
-    }
+            console.log("fetching data from cache");
 
-    return res.json(userOnline);
+           return res.json({User:user})
+        };
+        const userOnline = await axios.get(`https://jsonplaceholder.typicode.com/todos/${Id}`);
+        if(!userOnline) return res.json("no data found");
+        const {userId, title, completed} = userOnline.data;
+        console.log(Id,title,completed);
+        const response = await client.HSET(`userId:${Id}`,{Id : `${userId}`, title:`${title}`, completed:`${completed}`});
+        console.log(response);
+        await client.EXPIRE(`userId:${Id}`, 400);
+
+    return res.json(userOnline.data);
         
     } catch (error) {
         console.log(error);
